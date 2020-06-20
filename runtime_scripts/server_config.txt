@@ -1,0 +1,10 @@
+world=/root/.local/share/Terraria/Worlds/hello.wld
+autocreate=1
+seed=114515
+worldname=hello
+difficuly=0
+maxplayers=16
+port=7777
+password=8101919
+worldpath=/root/.local/share/Terraria/Worlds/
+upnp=1

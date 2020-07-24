@@ -11,9 +11,19 @@ using namespace std;
 // エントリーポイント
 int main(int argc, char* argv[])
 {
-    // セットアップ
-    s2s::InitializeIpc();
-
-    cout << s2s::WriteIpcFile("up", "hogehoge") << endl;
+    try
+    {
+        // セットアップ
+        s2s::InitializeIpc();
+        for(int i=0; i<100; ++i)
+        {
+            s2s::WriteIpcFile("up", "hogehoge");
+        }
+    }
+    catch(const std::exception& e)
+    {
+        cerr << e.what() << endl;
+        throw;
+    }
     return 0;
 }

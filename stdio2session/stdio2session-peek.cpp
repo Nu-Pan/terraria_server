@@ -11,8 +11,15 @@ using namespace std;
 // エントリーポイント
 int main(int argc, char* argv[])
 {
-    // セットアップ
-    s2s::InitializeIpc();
-
+    try
+    {
+        // セットアップ
+        s2s::InitializeIpc();
+    }
+    catch(const std::exception& e)
+    {
+        cerr << e.what() << endl;
+        throw;
+    }
     return 0;
 }

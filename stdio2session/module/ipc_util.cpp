@@ -12,6 +12,9 @@ namespace
 {
     // プロセス間通信ファイルパス
     static const char* const IPC_DIR_PATH = "/tmp/s2s";
+
+    // プロセス間通信ファイル権限
+    static mode_t IPC_FILE_PERMISSION = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP;
 }
 
 //----------------------------------------------------------------------------
@@ -91,6 +94,53 @@ namespace
 }
 
 //----------------------------------------------------------------------------
+// UniqueFD
+//----------------------------------------------------------------------------
+namespace
+{
+    class _UniqueFD
+    {
+    public:
+        // コンストラクタ
+        _UniqueFD(int fd)
+        :m_fd(fd)
+        {
+            // nop
+        };
+
+        // デストラクタ
+        ~_UniqueFD()
+        {
+            if( m_fd != 0 )
+            {
+                // 記述
+                const struct flock fl
+                {
+                    F_UNLCK,
+                    SEEK_SET,
+                    /*l_start=*/0,
+                    /*l_len=*/0,
+                    getpid()                    
+                };
+                // アンロック
+                fcntl(m_fd, F_SETLKW, &fl);
+                // クローズ
+                close(m_fd);
+                m_fd = 0;
+            }
+        }
+
+        // int へのキャスト
+        operator int() const
+        {
+            return m_fd;            
+        }
+
+    private:
+        int m_fd;
+    };
+}
+//----------------------------------------------------------------------------
 // Defenitions
 //----------------------------------------------------------------------------
 namespace s2s
@@ -137,26 +187,38 @@ namespace s2s
         {
             return _MakeIpcFilePath(tag, ipcFileName);
         }();
+        // ファイルを開く
+        const _UniqueFD fd = open(ipcFilePath.c_str(), O_WRONLY|O_CREAT, IPC_FILE_PERMISSION);
+        if( !fd )
+        {
+            ostringstream oss;
+            oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << fd << ", errno " << errno << ").";
+            throw runtime_error(oss.str());
+        }
         // ファイルをロックする
         {
-            // #TODO
-        }
-        // ファイルを開く
-        const auto pFile = [&]()
-        {
-            FILE* pTemp = fopen(ipcFilePath.c_str(), "w");
-            if( !pTemp )
+            // 記述
+            const struct flock fl
+            {
+                F_WRLCK,
+                SEEK_SET,
+                /*l_start=*/0,
+                /*l_len=*/0,
+                getpid()                    
+            };
+            // ロック
+            const int result = fcntl(fd, F_SETLKW, &fl);
+            if( result != 0 )
             {
                 ostringstream oss;
-                oss << "Failed to open file(file=" << ipcFilePath << ").";
+                oss << "Failed to fcntl(file=" << ipcFilePath << ", result=" << result << ").";
                 throw runtime_error(oss.str());
             }
-            return unique_ptr<FILE,decltype(&fclose)>(pTemp, &fclose);
-        }();
+        }
         // ファイルにテキストを書き込み
         {
-            const int result =fputs(text.c_str(), pFile.get());
-            if( result == EOF )
+            const int result = write(fd, text.data(), text.size());
+            if( result < 0 )
             {
                 ostringstream oss;
                 oss << "Failed to write text(file=" << ipcFilePath << ").";
@@ -179,9 +241,34 @@ namespace s2s
         // 指定のファイルの中身をメモリ上に読み出す
         const string text = [&]()
         {
+            // ファイルを開く
+            _UniqueFD fd = open(ipcFilePath.c_str(), O_RDONLY);
+            if( fd < 0 )
+            {
+                ostringstream oss;
+                oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << fd << ", errno " << errno << ").";
+                throw runtime_error(oss.str());
+            }
             // ファイルをロックする
             {
-                // #TODO
+                // 記述
+                const struct flock fl
+                {
+                    F_RDLCK,
+                    SEEK_SET,
+                    /*l_start=*/0,
+                    /*l_len=*/0,
+                    getpid()                 
+                };
+                // ロック
+                int tempFd = fd;
+                const int result = fcntl(tempFd, F_SETLKW, &fl);
+                if( result != 0 )
+                {
+                    ostringstream oss;
+                    oss << "Failed to fcntl(file=" << ipcFilePath << ", result=" << result << ", errno=" << errno << ").";
+                    throw runtime_error(oss.str());
+                }
             }
             // stat でファイルサイズを問い合わせる
             const size_t fileSizeInBytes = [&]()
@@ -196,24 +283,12 @@ namespace s2s
                 }
                 return statData.st_size;
             }();
-            // ファイルを開く
-            const auto pFile = [&]()
-            {
-                FILE* pTemp = fopen(ipcFilePath.c_str(), "rb");
-                if( !pTemp )
-                {
-                    ostringstream oss;
-                    oss << "Failed to open file(file=" << ipcFilePath << ").";
-                    throw runtime_error(oss.str());
-                }
-                return unique_ptr<FILE,decltype(&fclose)>(pTemp, &fclose);
-            }();
             // メモリに読み出す
             string textBuffer;
             {
                 textBuffer.resize(fileSizeInBytes);
-                const int result = fread(&textBuffer[0], sizeof(char), fileSizeInBytes,pFile.get());
-                if( result < 1 )
+                const int result = read(fd, &textBuffer[0], fileSizeInBytes);
+                if( result < 0 )
                 {
                     ostringstream oss;
                     oss << "Failed to read text(file=" << ipcFilePath << ").";
@@ -228,11 +303,11 @@ namespace s2s
                 もしも、そもそもファイルが存在してなければ、ここまで処理が到達することはない。
                 なので、ファイルの存在チェックとかは不要。
             */
-            const int result = remove(ipcFilePath.c_str());
+            const int result = unlink(ipcFilePath.c_str());
             if( result != 0 )
             {
                 ostringstream oss;
-                oss << "Failed to 'remove' file(file=" << ipcFilePath << ").";
+                oss << "Failed to unlink(file=" << ipcFilePath << ").";
                 throw runtime_error(oss.str());                
             }
         }

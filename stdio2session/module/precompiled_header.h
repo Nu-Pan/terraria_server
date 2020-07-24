@@ -13,6 +13,8 @@
 #include <ctime>
 
 // Unix header
+#include <unistd.h>
+#include <dirent.h>
 #include <sys/time.h>
 #include <sys/stat.h>
-#include <dirent.h>
+#include <sys/file.h>

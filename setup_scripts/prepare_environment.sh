@@ -4,6 +4,9 @@
 install_prefix=$1
 commands_prefix=$2
 
+# 必要なパッケージをインストール
+apt-get install -y tmux netcat clang make
+
 # 実行ファイルに実行権限を付与
 chmod +x $install_prefix/TerrariaServer.bin.x86_64
 if [ $? -gt 0 ]; then

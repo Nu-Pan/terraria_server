@@ -9,10 +9,19 @@ commands_prefix=$2
 export TERM=xterm
 
 # サーバーを起動
-$install_prefix/TerrariaServer.bin.x86_64
+coproc $install_prefix/TerrariaServer.bin.x86_64
 if [ $? -gt 0 ]; then
     exit 1
 fi
+
+# netcat 
+while true
+do
+#    nc -kl -p 7776 <&"${COPROC[0]}" >&"${COPROC[1]}"
+    jobs
+    echo $?
+    sleep 1
+done
 
 # 正常終了
 exit 0

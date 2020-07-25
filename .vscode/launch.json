@@ -28,7 +28,7 @@
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bazel-bin/stdio2session/server",
-            "args": [],
+            "args": ["${workspaceFolder}/bazel-bin/stdio2session/test-target"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

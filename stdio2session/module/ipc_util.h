@@ -9,10 +9,12 @@ namespace s2s
 
     /** プロセス間通信ファイルにテキストを書き込む
     @param[in]  tag     チャンネル識別タグ
+    @param[in]  name    書き込むファイルの名前
+                        空文字列を渡した場合は自動決定
     @param[in]  text    ファイルに書き込むテキスト
     @return             書き込んだファイルの名前
     */
-    std::string WriteIpcFile( const std::string& tag, const std::string& text );
+    std::string WriteIpcFile( const std::string& tag, const std::string& name, const std::string& text );
 
     /**　プロセス間通信ファイルからテキストを読み出す
     読み出したファイルは削除される。

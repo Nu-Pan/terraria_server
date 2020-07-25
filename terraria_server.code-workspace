@@ -12,7 +12,9 @@
 			"deque": "cpp",
 			"vector": "cpp",
 			"functional": "cpp",
-			"iosfwd": "cpp"
+			"iosfwd": "cpp",
+			"array": "cpp",
+			"thread": "cpp"
 		}
 	}
 }

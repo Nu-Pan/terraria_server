@@ -6,6 +6,16 @@ cc_binary(
     deps = [
         "//stdio2session/module",
     ],
+    linkopts = ["-pthread"],
+)
+
+cc_binary(
+    name = "interpreter",
+    srcs = glob(["stdio2session-interpreter.cpp"]),
+    deps = [
+        "//stdio2session/module",
+    ],
+    linkopts = ["-pthread"],
 )
 
 cc_binary(
@@ -14,6 +24,7 @@ cc_binary(
     deps = [
         "//stdio2session/module",
     ],
+    linkopts = ["-pthread"],
 )
 
 cc_binary(
@@ -22,4 +33,10 @@ cc_binary(
     deps = [
         "//stdio2session/module",
     ],
+    linkopts = ["-pthread"],
+)
+
+cc_binary(
+    name = "test-target",
+    srcs = glob(["test-target.cpp"])
 )

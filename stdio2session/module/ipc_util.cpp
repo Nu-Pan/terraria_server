@@ -3,7 +3,10 @@
 
 #include "ipc_util.h"
 
+#include "unix_util.h"
+
 using namespace std;
+using namespace s2s;
 
 //----------------------------------------------------------------------------
 // Link-local Constants
@@ -14,7 +17,7 @@ namespace
     static const char* const IPC_DIR_PATH = "/tmp/s2s";
 
     // プロセス間通信ファイル権限
-    static mode_t IPC_FILE_PERMISSION = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP;
+    static mode_t IPC_FILE_PERMISSION = S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH;
 }
 
 //----------------------------------------------------------------------------
@@ -80,7 +83,7 @@ namespace
         // ディレクトリを生成
         if( !doesExists )
         {
-            const int result = mkdir(dirPath.c_str(), 0666);
+            const int result = mkdir(dirPath.c_str(), IPC_FILE_PERMISSION);
             if( result )
             {
                 ostringstream oss;
@@ -94,53 +97,6 @@ namespace
 }
 
 //----------------------------------------------------------------------------
-// UniqueFD
-//----------------------------------------------------------------------------
-namespace
-{
-    class _UniqueFD
-    {
-    public:
-        // コンストラクタ
-        _UniqueFD(int fd)
-        :m_fd(fd)
-        {
-            // nop
-        };
-
-        // デストラクタ
-        ~_UniqueFD()
-        {
-            if( m_fd != 0 )
-            {
-                // 記述
-                const struct flock fl
-                {
-                    F_UNLCK,
-                    SEEK_SET,
-                    /*l_start=*/0,
-                    /*l_len=*/0,
-                    getpid()                    
-                };
-                // アンロック
-                fcntl(m_fd, F_SETLKW, &fl);
-                // クローズ
-                close(m_fd);
-                m_fd = 0;
-            }
-        }
-
-        // int へのキャスト
-        operator int() const
-        {
-            return m_fd;            
-        }
-
-    private:
-        int m_fd;
-    };
-}
-//----------------------------------------------------------------------------
 // Defenitions
 //----------------------------------------------------------------------------
 namespace s2s
@@ -149,17 +105,22 @@ namespace s2s
      */
     void InitializeIpc()
     {
-        // nop
+        _SafeMakeDir(IPC_DIR_PATH);
         return;
     }
 
     /** プロセス間通信ファイルにテキストを書き込む
     */
-    std::string WriteIpcFile( const std::string& tag, const std::string& text )
+    std::string WriteIpcFile( const std::string& tag, const std::string& name, const std::string& text )
     {
         // ファイル名を生成
         const string ipcFileName = [&]()
         {
+            // 外部指定がある場合はそれを使う
+            if( !name.empty() )
+            {
+                return name;
+            }
             // システム時刻を問い合わせ
             const struct timeval rawTime = []()
             {
@@ -188,11 +149,11 @@ namespace s2s
             return _MakeIpcFilePath(tag, ipcFileName);
         }();
         // ファイルを開く
-        const _UniqueFD fd = open(ipcFilePath.c_str(), O_WRONLY|O_CREAT, IPC_FILE_PERMISSION);
-        if( !fd )
+        const UniqueFD fd = open(ipcFilePath.c_str(), O_WRONLY|O_CREAT, IPC_FILE_PERMISSION);
+        if( !static_cast<int>(fd) )
         {
             ostringstream oss;
-            oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << fd << ", errno " << errno << ").";
+            oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << static_cast<int>(fd) << ", errno " << errno << ").";
             throw runtime_error(oss.str());
         }
         // ファイルをロックする
@@ -207,7 +168,7 @@ namespace s2s
                 getpid()                    
             };
             // ロック
-            const int result = fcntl(fd, F_SETLKW, &fl);
+            const int result = fcntl(static_cast<int>(fd), F_SETLKW, &fl);
             if( result != 0 )
             {
                 ostringstream oss;
@@ -217,7 +178,7 @@ namespace s2s
         }
         // ファイルにテキストを書き込み
         {
-            const int result = write(fd, text.data(), text.size());
+            const int result = write(static_cast<int>(fd), text.data(), text.size());
             if( result < 0 )
             {
                 ostringstream oss;
@@ -242,11 +203,11 @@ namespace s2s
         const string text = [&]()
         {
             // ファイルを開く
-            _UniqueFD fd = open(ipcFilePath.c_str(), O_RDONLY);
-            if( fd < 0 )
+            UniqueFD fd = open(ipcFilePath.c_str(), O_RDONLY);
+            if( static_cast<int>(fd) < 0 )
             {
                 ostringstream oss;
-                oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << fd << ", errno " << errno << ").";
+                oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << static_cast<int>(fd) << ", errno " << errno << ").";
                 throw runtime_error(oss.str());
             }
             // ファイルをロックする
@@ -261,7 +222,7 @@ namespace s2s
                     getpid()                 
                 };
                 // ロック
-                int tempFd = fd;
+                int tempFd = static_cast<int>(fd);
                 const int result = fcntl(tempFd, F_SETLKW, &fl);
                 if( result != 0 )
                 {
@@ -287,7 +248,7 @@ namespace s2s
             string textBuffer;
             {
                 textBuffer.resize(fileSizeInBytes);
-                const int result = read(fd, &textBuffer[0], fileSizeInBytes);
+                const int result = read(static_cast<int>(fd), &textBuffer[0], fileSizeInBytes);
                 if( result < 0 )
                 {
                     ostringstream oss;

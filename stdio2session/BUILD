@@ -19,15 +19,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "peek",
-    srcs = glob(["stdio2session-peek.cpp"]),
-    deps = [
-        "//stdio2session/module",
-    ],
-    linkopts = ["-pthread"],
-)
-
-cc_binary(
     name = "server",
     srcs = glob(["stdio2session-server.cpp"]),
     deps = [

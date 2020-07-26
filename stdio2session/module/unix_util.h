@@ -1,4 +1,6 @@
-
+/*
+    unix util
+*/
 #pragma once
 
 //----------------------------------------------------------------------------
@@ -6,6 +8,10 @@
 //----------------------------------------------------------------------------
 namespace s2s
 {
+    /**
+    @brief  ファイルディスクリプタ用スマートポインタ
+    std::unique_ptr みたいな挙動をする
+    */
     class UniqueFD
     {
     public:
@@ -59,12 +65,29 @@ namespace s2s
             m_fd = fd;
         }
 
-        // int へのキャスト
-        explicit operator int() const
+        // デリファレンス
+        int operator *() const
         {
-            return m_fd;            
+            return m_fd;
         }
+
     private:
-        int m_fd;
+        int m_fd;   //!< ファイルディスクリプタ
     };
+}
+
+//----------------------------------------------------------------------------
+// Functions
+//----------------------------------------------------------------------------
+namespace s2s
+{
+    /**
+    @brief  パイプ付きでプロセスを立ち上げる
+    @param[out] outPid      立ち上げたプロセスの ID
+    @param[out] outPipeR    立ち上げたプロセスとつながっているパイプ（読み込み）
+    @param[out] outPipeW    立ち上げたプロセスとつながっているパイプ（書き込み）
+    @param[in]  cmd         実行コマンド
+    @param[in]  argv        実行コマンド引数
+    */
+    void CreatePipedProcess(pid_t& outPid, UniqueFD& outPipeR, UniqueFD& outPipeW, const char* cmd, char* const argv[]);
 }

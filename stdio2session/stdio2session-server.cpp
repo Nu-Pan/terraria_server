@@ -1,96 +1,22 @@
 /*
-    stdio to session - Server
+    stdio to session - server
 */
+
+//----------------------------------------------------------------------------
+// File Dependencies
+//----------------------------------------------------------------------------
 
 #include "module/precompiled_header.h"
 
 #include "module/ipc_util.h"
 #include "module/unix_util.h"
 
+//----------------------------------------------------------------------------
+// Namespace Dependencies
+//----------------------------------------------------------------------------
+
 using namespace std;
 using namespace s2s;
-
-//----------------------------------------------------------------------------
-// Link-local Functions
-//----------------------------------------------------------------------------
-namespace
-{
-    // パイプ付きでプロセスを立ち上げる
-    void CreatePipedProcess(pid_t& outPid, UniqueFD& outPipeR, UniqueFD& outPipeW, const char* cmd, char* const argv[])
-    {
-        // パイプを生成
-        UniqueFD pipeDR, pipeDW;
-        UniqueFD pipeUR, pipeUW;
-        {
-            /* @note:
-                ４種類あるディスクリプタの図解
-
-                        Down Stream
-                        DW --> DR
-                Parent              Child
-                        UR <-- UW
-                        Up Stream
-
-                Parent は UR と DW を触る。
-                Child は DR と UW を触る。
-            */
-            auto createPipe = [](UniqueFD& outPipeR, UniqueFD& outPipeW, bool isNonBlock )
-            {
-                int tempPipe[2];
-                const int result = pipe2(tempPipe, isNonBlock?O_NONBLOCK:0);
-                if( result < 0 )
-                {
-                    ostringstream oss;
-                    oss << "Failed to pipe(result=" << result << ", errno" << errno << ")." << endl;
-                    throw runtime_error(oss.str());
-                }
-                outPipeR = tempPipe[0];
-                outPipeW = tempPipe[1];
-            };
-            createPipe(pipeDR, pipeDW, false);
-            createPipe(pipeUR, pipeUW, true);
-        }
-        // fork
-        const pid_t pid = fork();
-        if( pid < 0 )
-        {
-            ostringstream oss;
-            oss << "failed to fork(argc=" << pid << ", errno=" << errno << ")." << endl;
-            throw runtime_error(oss.str());
-        }
-        // 自身が子プロセスの場合、自身をラップ対象プロセスで置き換える。
-        if( pid == 0 )
-        {
-            // パイプ設定
-            {
-                pipeUR.Reset();
-                pipeDW.Reset();
-                dup2(static_cast<int>(pipeDR), 0);
-                dup2(static_cast<int>(pipeUW), 1);
-                pipeDR.Reset();
-                pipeUW.Reset();
-            }
-            // プロセス置き換え
-            const int result = execv(cmd, argv);
-            if( result < 0 )
-            {
-                ostringstream oss;
-                oss << "failed to execv(result=" << result << ", errno=" << errno << ")." << endl;
-                throw runtime_error(oss.str());
-            }
-            /* @note:
-                execv でプロセスが置き換わるので、コードパスはここまで来ない。
-            */
-        }
-        // 自分が親プロセスの場合はこのまま続行
-        pipeDR.Reset();
-        pipeUW.Reset();
-        outPid = pid;
-        outPipeR = move(pipeUR);
-        outPipeW = move(pipeDW);
-        return;
-    }
-}
 
 //----------------------------------------------------------------------------
 // Entry point
@@ -144,7 +70,7 @@ int main(int argc, char* argv[])
                 string readBuffer;
                 {
                     readBuffer.resize( 64 * 1024 );
-                    const int result = read(static_cast<int>(tgtPipeR), &readBuffer[0], readBuffer.size());
+                    const int result = read(*tgtPipeR, &readBuffer[0], readBuffer.size());
                     if( (result < 0) && (errno != EAGAIN) )
                     {
                         ostringstream oss;
@@ -161,7 +87,7 @@ int main(int argc, char* argv[])
             else
             {
                 // リクエストの内容をそのままラップ対象プロセスの stdin に流す
-                const int result = write(static_cast<int>(tgtPipeW), &request[0], request.size());
+                const int result = write(*tgtPipeW, &request[0], request.size());
                 if( result < 0 )
                 {
                     ostringstream oss;

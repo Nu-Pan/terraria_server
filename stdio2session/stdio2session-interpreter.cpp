@@ -1,5 +1,5 @@
 /*
-    stdio to session - Call
+    stdio to session - interpreter
 */
 
 #include "module/precompiled_header.h"

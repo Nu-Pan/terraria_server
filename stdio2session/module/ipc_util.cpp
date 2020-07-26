@@ -1,9 +1,20 @@
+/*
+    inter process communication uils
+*/
+
+//----------------------------------------------------------------------------
+// File Dependencies
+//----------------------------------------------------------------------------
 
 #include "precompiled_header.h"
 
 #include "ipc_util.h"
 
 #include "unix_util.h"
+
+//----------------------------------------------------------------------------
+// Namespace Dependencies
+//----------------------------------------------------------------------------
 
 using namespace std;
 using namespace s2s;
@@ -150,10 +161,10 @@ namespace s2s
         }();
         // ファイルを開く
         const UniqueFD fd = open(ipcFilePath.c_str(), O_WRONLY|O_CREAT, IPC_FILE_PERMISSION);
-        if( !static_cast<int>(fd) )
+        if( !*fd )
         {
             ostringstream oss;
-            oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << static_cast<int>(fd) << ", errno " << errno << ").";
+            oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << *fd << ", errno " << errno << ").";
             throw runtime_error(oss.str());
         }
         // ファイルをロックする
@@ -168,7 +179,7 @@ namespace s2s
                 getpid()                    
             };
             // ロック
-            const int result = fcntl(static_cast<int>(fd), F_SETLKW, &fl);
+            const int result = fcntl(*fd, F_SETLKW, &fl);
             if( result != 0 )
             {
                 ostringstream oss;
@@ -178,7 +189,7 @@ namespace s2s
         }
         // ファイルにテキストを書き込み
         {
-            const int result = write(static_cast<int>(fd), text.data(), text.size());
+            const int result = write(*fd, text.data(), text.size());
             if( result < 0 )
             {
                 ostringstream oss;
@@ -204,10 +215,10 @@ namespace s2s
         {
             // ファイルを開く
             UniqueFD fd = open(ipcFilePath.c_str(), O_RDONLY);
-            if( static_cast<int>(fd) < 0 )
+            if( *fd < 0 )
             {
                 ostringstream oss;
-                oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << static_cast<int>(fd) << ", errno " << errno << ").";
+                oss << "Failed to open file(file=" << ipcFilePath << ", fd=" << *fd << ", errno " << errno << ").";
                 throw runtime_error(oss.str());
             }
             // ファイルをロックする
@@ -222,7 +233,7 @@ namespace s2s
                     getpid()                 
                 };
                 // ロック
-                int tempFd = static_cast<int>(fd);
+                int tempFd = *fd;
                 const int result = fcntl(tempFd, F_SETLKW, &fl);
                 if( result != 0 )
                 {
@@ -248,7 +259,7 @@ namespace s2s
             string textBuffer;
             {
                 textBuffer.resize(fileSizeInBytes);
-                const int result = read(static_cast<int>(fd), &textBuffer[0], fileSizeInBytes);
+                const int result = read(*fd, &textBuffer[0], fileSizeInBytes);
                 if( result < 0 )
                 {
                     ostringstream oss;
@@ -330,5 +341,33 @@ namespace s2s
         }();
         // 正常終了
         return ipcFileName;
+    }
+
+    /** 指定されたプロセス間通信ファイルが読み取り可能な状態か調べます
+    */
+    bool IsReadableIpcFile(const std::string& tag, const std::string& ipcFileName)
+    {
+        // ファイルパスを生成
+        const string ipcFilePath = _MakeIpcFilePath(tag, ipcFileName);
+
+        // stat で問い合わせ
+        struct stat statData = {};
+        {
+            const int result = stat(ipcFilePath.c_str(), &statData);
+            if( result != 0 )
+            {
+                return false;
+            }
+        }
+        // 対象が通常ファイルじゃない場合は致命的エラー扱い
+        if( !S_ISREG(statData.st_mode) )
+        {
+            ostringstream oss;
+            oss << "There are '" << ipcFileName << "' as non-regular file.";
+            oss << "'" << ipcFileName << "' *MUST BE* regular file.";
+            throw runtime_error(oss.str());
+        }
+        // 読める
+        return true;
     }
 }

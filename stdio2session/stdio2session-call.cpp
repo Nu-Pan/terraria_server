@@ -39,6 +39,10 @@ int main(int argc, char* argv[])
             throw runtime_error(oss.str());
         }
     }
+    // 気持ち待つ
+    {
+        usleep( 3 * 1000 );
+    }
     // stdout を読み出す
     {
         // 空リクエストを送信
@@ -53,10 +57,25 @@ int main(int argc, char* argv[])
             }
             return ipcFileName;
         }();
-        // ファイルが還ってくるのを待つ
+        // ファイルが返ってくるのを待つ
+        for(int i=0; true; ++i)
         {
-            // #TODO タイムアウト付きポーリングする
-            sleep( 1 );
+            // ファイルの存在をチェック
+            if( s2s::IsReadableIpcFile("down", emptyRequestFileName) )
+            {
+                break;
+            }
+            // タイムアウト
+            if( 2000 < i )
+            {
+                ostringstream oss;
+                oss << "Response timed out(emptyRequestFileName=" << emptyRequestFileName << ")." << endl;
+                throw runtime_error(oss.str());
+            }
+            // スリープ
+            {
+                usleep(1000);
+            }
         }
         // 返ってきたファイルを読み出す
         {

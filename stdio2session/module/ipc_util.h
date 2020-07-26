@@ -1,3 +1,6 @@
+/*
+    stdio to session - inter process communication util
+*/
 
 #pragma once
 
@@ -31,4 +34,13 @@ namespace s2s
                     ファイルがない場合は空白文字
     */
     std::string GetReadableIpcFile( const std::string& tag );
+
+    /** 指定されたプロセス間通信ファイルが読み取り可能な状態か調べます
+    ノンブロッキングです。
+    @param[in]  tag         チャンネル識別タグ
+    @param[in]  ipcFileName ファイル名
+    @retval     false       読み取り不能
+    @retval     true        読み取り可能
+    */
+    bool IsReadableIpcFile(const std::string& tag, const std::string& ipcFileName);
 }

@@ -42,51 +42,40 @@ int main(int argc, char* argv[])
     {
         CreatePipedProcess(tgtPid, tgtPipeR, tgtPipeW, argv[1], argc<3?nullptr:&argv[2]);
     }
-    // 子プロセス監視スレッドを立ち上げる
+    // 終了フラグ
     atomic_bool doesExit(false);
-    thread tgtWaitingThread([&](){ wait(nullptr); doesExit = true; });
 
-    // メインループ
-    for(;;)
+    // 子プロセス監視スレッド
+    thread tgtWaitingThread([&]()
     {
-        // 子プロセスの終了をチェック
-        if( doesExit )
+         wait(nullptr); doesExit = true;
+    });
+    // リクエスト処理スレッド
+    thread requestServerThread([&]()
+    {
+        // メインループ
+        for(;;)
         {
-            break;
-        }
-        // クライアントからのリクエストを取得
-        const string ipcFileName = GetReadableIpcFile("up");
-        if( ipcFileName.empty() )
-        {
-            sleep(1);
-            continue;
-        }
-        // リクエストを処理
-        {
-            const string request = s2s::ReadIpcFile("up", ipcFileName);
-            if( request.empty() )
+            // ビジーループ防止用スリープ
             {
-                // ラップ対象プロセスから stdout を読み取る
-                string readBuffer;
-                {
-                    readBuffer.resize( 64 * 1024 );
-                    const int result = read(*tgtPipeR, &readBuffer[0], readBuffer.size());
-                    if( (result < 0) && (errno != EAGAIN) )
-                    {
-                        ostringstream oss;
-                        oss << "Failed to read(result=" << result << ", errno=" << errno << ")." << endl;
-                        throw runtime_error(oss.str());
-                    }
-                    readBuffer.resize( max(result, 0) );
-                }
-                // 読み取った内容をクライアントに返送する
-                {
-                    WriteIpcFile("down", ipcFileName, readBuffer);
-                }
+                usleep(1);
             }
-            else
+            // 子プロセスの終了をチェック
+            if( doesExit )
             {
-                // リクエストの内容をそのままラップ対象プロセスの stdin に流す
+                break;
+            }
+            // クライアントからのリクエストをチェック
+            const string ipcFileName = GetReadableIpcFile("up");
+            if( ipcFileName.empty() )
+            {
+                // 暇なときは少し長めにスリープ
+                usleep(1000);
+                continue;
+            }
+            // リクエストの内容をそのままラップ対象プロセスの stdin に流す
+            {
+                const string request = s2s::ReadIpcFile("up", ipcFileName);
                 const int result = write(*tgtPipeW, &request[0], request.size());
                 if( result < 0 )
                 {
@@ -96,10 +85,57 @@ int main(int argc, char* argv[])
                 }
             }
         }
-    }
+    });
+    // stdout リダイレクトスレッド
+    thread stdoutRedirectionThread([&]()
+    {
+        // メインループ
+        for(;;)
+        {
+            // ビジーループ防止用スリープ
+            {
+                usleep(1);
+            }
+            // 子プロセスの終了をチェック
+            if( doesExit )
+            {
+                break;
+            }
+            // ラップ対象プロセスから stdout を読み取る
+            string readBuffer;
+            {
+                // 読み出しを試行
+                readBuffer.resize( 64 * 1024 );
+                const int result = read(*tgtPipeR, &readBuffer[0], readBuffer.size());
+                if( (result < 0) && (errno != EAGAIN) )
+                {
+                    ostringstream oss;
+                    oss << "Failed to read(result=" << result << ", errno=" << errno << ")." << endl;
+                    throw runtime_error(oss.str());
+                }
+                // データなしの場合は何もしない
+                if( result < 0 )
+                {
+                    // 暇なときは少し長めにスリープ
+                    usleep(1000);
+                    continue;
+                }
+                // 実際に読めたサイズでバッファをリサイズ
+                {
+                    readBuffer.resize( max(result, 0) );
+                }
+            }
+            // 読み取った内容をクライアントに返送する
+            {
+                WriteIpcFile("down", "", readBuffer);
+            }
+        }
+    });
     // スレッドを合流
     {
         tgtWaitingThread.join();
+        requestServerThread.join();
+        stdoutRedirectionThread.join();
     }
     // 正常終了
     return 0;

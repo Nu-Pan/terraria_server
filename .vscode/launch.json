@@ -5,11 +5,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Launch call",
+            "name": "(gdb) Launch server",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bazel-bin/stdio2session/call",
-            "args": [],
+            "program": "${workspaceFolder}/bazel-bin/stdio2session/s2s-server",
+            "args": ["${workspaceFolder}/bazel-bin/stdio2session/s2s-test-target"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
@@ -24,11 +24,11 @@
             ]
         },
         {
-            "name": "(gdb) Launch server",
+            "name": "(gdb) Launch vt",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bazel-bin/stdio2session/server",
-            "args": ["${workspaceFolder}/bazel-bin/stdio2session/test-target"],
+            "program": "${workspaceFolder}/bazel-bin/stdio2session/s2s-vt",
+            "args": [" << test_data.txt"],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],

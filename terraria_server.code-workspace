@@ -14,7 +14,8 @@
 			"functional": "cpp",
 			"iosfwd": "cpp",
 			"array": "cpp",
-			"thread": "cpp"
+			"thread": "cpp",
+			"atomic": "cpp"
 		}
 	}
 }

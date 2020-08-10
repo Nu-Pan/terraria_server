@@ -2,14 +2,34 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build stdui2session",
             "type": "shell",
-            "command": "bazel build //stdio2session:* --compilation_mode=dbg -s",
+            "command": "bazel build //stdio2session:*",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
             }
-        }
+        },
+        {
+            "label": "build terraria_server",
+            "type": "shell",
+            "command": "bazel build //terraria_server:*",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build runtime_image",
+            "type": "shell",
+            "command": "bazel build //runtime_image:image",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
     ]
 }

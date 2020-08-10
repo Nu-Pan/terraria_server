@@ -38,6 +38,7 @@ namespace
 {
     static random_device s_seedGenerator;
     static mt19937 s_randomGenerator(s_seedGenerator());
+    static uint64_t s_ipcFileCreationCounter = 0;
 }
 
 //----------------------------------------------------------------------------
@@ -112,6 +113,24 @@ namespace
 //----------------------------------------------------------------------------
 namespace s2s
 {
+    /** すべてのプロセス間通信ファイルを削除する
+    */
+    void ResetIpcFile()
+    {
+        const string cmd = [&](){
+            ostringstream oss;
+            oss << "rm -rf \"" << IPC_DIR_PATH << "/*\"";
+            return oss.str();
+        }();
+        const int result = system(cmd.c_str());
+        if(result!=0)
+        {
+            ostringstream oss;
+            oss << "Failed to system(\"" << cmd << "\")" << endl;
+            throw runtime_error(oss.str());
+        }
+    }
+
     /** プロセス間通信に必要なセットアップを行う
      */
     void InitializeIpc()
@@ -145,9 +164,13 @@ namespace s2s
                 }
                 return temp;
             }();
+            // ファイル生成数カウンタを更新
+            {
+                ++s_ipcFileCreationCounter;
+            }
             // 時刻をそのままファイル名化
             ostringstream oss;
-            oss << rawTime.tv_sec << "_" << rawTime.tv_usec;
+            oss << rawTime.tv_sec << "_" << rawTime.tv_usec << "_" << s_ipcFileCreationCounter;
             return oss.str();
         }();
         // ディレクトリの存在を保証

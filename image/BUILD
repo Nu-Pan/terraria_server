@@ -6,6 +6,7 @@ pkg_tar(
     deps = [
         "//terraria_server:pkg",
         "//stdio2session:pkg",
+        "//scripts:pkg",
     ],
 )
 
@@ -13,9 +14,9 @@ container_image(
     name = "image",
     base = "@official_ubuntu//image",
     tars = [":pkg"],
-    #symlinks = {"":""},
-    #cmd = "",
-    #ports = ""
+    cmd = "run_terraria_server.sh",
+    ports = ["7777/udp", "7777/tcp"],
+    
 )
 
 container_push(
@@ -25,4 +26,11 @@ container_push(
     registry = "index.docker.io",
     repository = "nupan/terraria-server",
     tag = "dev",
+)
+
+genrule(
+    name = "test",
+    srcs = [":pkg"],
+    outs = ["test.log"],
+    cmd = "tar xf $< -C / > $@ 2>&1",
 )

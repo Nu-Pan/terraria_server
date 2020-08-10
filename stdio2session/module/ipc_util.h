@@ -6,6 +6,10 @@
 
 namespace s2s
 {
+    /** すべてのプロセス間通信ファイルを削除する
+    */
+    void ResetIpcFile();
+
     /** プロセス間通信に必要なセットアップを行う
      */
     void InitializeIpc();

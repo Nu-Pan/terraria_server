@@ -80,15 +80,15 @@ namespace s2s
                 pipeUW.Reset();
             }
             // プロセス置き換え
-            const int result = execv(cmd, argv);
+            const int result = execvp(cmd, argv);
             if( result < 0 )
             {
                 ostringstream oss;
-                oss << "failed to execv(result=" << result << ", errno=" << errno << ")." << endl;
+                oss << "failed to execvp(result=" << result << ", errno=" << errno << ")." << endl;
                 throw runtime_error(oss.str());
             }
             /* @note:
-                execv でプロセスが置き換わるので、コードパスはここまで来ない。
+                execvp でプロセスが置き換わるので、コードパスはここまで来ない。
             */
         }
         // 自分が親プロセスの場合はこのまま続行

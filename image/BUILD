@@ -7,16 +7,16 @@ pkg_tar(
         "//terraria_server:pkg",
         "//stdio2session:pkg",
         "//scripts:pkg",
+        "//cron:pkg",
     ],
 )
 
 container_image(
     name = "image",
-    base = "@official_ubuntu//image",
+    base = "@terraria-server-base//image",
     tars = [":pkg"],
     cmd = "run_terraria_server.sh",
-    ports = ["7777/udp", "7777/tcp"],
-    
+    ports = ["7777/udp", "7777/tcp"],    
 )
 
 container_push(

@@ -7,7 +7,7 @@ export TERM=xterm
 # stdio2session の状態をリセット
 s2s-clean
 
-# サーバーを起動
+# サーバーをバックグラウンドで起動
 s2s-server /usr/bin/TerrariaServer.bin.x86_64 &
 if [ $? -gt 0 ]; then
     exit 1
@@ -44,6 +44,18 @@ EOF
 
 fi
 
+# ログがでなくなるまで繰り返し読み出す
+while ! `s2s-read`
+do
+    sleep 1
+done
+
+# 自動処理をスタート
+crontab /etc/cron.d/terraria_server
+service cron restart
+
+# サーバーの終了を待機
+echo Terraria server is ready!
 wait
 
 # 正常終了

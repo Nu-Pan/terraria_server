@@ -40,9 +40,9 @@ load(
 )
 
 container_pull(
-  name = "official_ubuntu",
+  name = "terraria-server-base",
   registry = "index.docker.io",
-  repository = "library/ubuntu",
-  tag = "20.04",
-  digest = "sha256:60f560e52264ed1cb7829a0d59b1ee7740d7580e0eb293aca2d722136edb1e24",
+  repository = "nupan/terraria-server-base",
+  tag = "latest",
+  #digest = "sha256:60f560e52264ed1cb7829a0d59b1ee7740d7580e0eb293aca2d722136edb1e24",
 )

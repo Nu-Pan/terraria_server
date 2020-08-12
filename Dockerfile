@@ -2,8 +2,7 @@
 # 開発用コンテナなので容量を気にする必要はない
 # なのでrun は１つにまとめない
 
-# alpine は gcc ベースじゃないので terraria が動かない
-FROM ubuntu:20.04
+FROM nupan/terraria-server-base:latest
 
 # 参照先リポジトリを JAIST にする
 RUN sed -i.bak -e "s%http://[^ ]\+%http://ftp.jaist.ac.jp/pub/Linux/ubuntu/%g" /etc/apt/sources.list

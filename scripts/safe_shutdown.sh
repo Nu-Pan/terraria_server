@@ -27,7 +27,7 @@ EOF
 sleep $delay_in_sec
 playing_result_raw=`s2s-read`
 echo playing_result_raw: \"$playing_result_raw\"
-playing_result=`echo $playing_result_raw | grep -E "[0-9]+ +players +connected"`
+playing_result=`echo $playing_result_raw | grep -E "[0-9]+ +players* +connected"`
 echo playing_result: \"$playing_result\"
 
 # プレイヤーがいる場合は生存記録を残して終了

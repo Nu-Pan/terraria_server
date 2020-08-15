@@ -27,11 +27,11 @@ EOF
 sleep $delay_in_sec
 playing_result_raw=`s2s-read`
 echo playing_result_raw: \"$playing_result_raw\"
-playing_result=`echo $playing_result_raw | grep "No players connected."`
+playing_result=`echo $playing_result_raw | grep -E "[0-9]+ +players +connected"`
 echo playing_result: \"$playing_result\"
 
 # プレイヤーがいる場合は生存記録を残して終了
-if [ ! "$playing_result" ] || [ $force_alive -eq 1 ]; then
+if [ -n "$playing_result" ] || [ $force_alive -eq 1 ]; then
     echo alive
     rm -f `find $safe_shutdown_dir_path -type f -name "*"`
     touch $safe_shutdown_dir_path/$up_time_in_sec

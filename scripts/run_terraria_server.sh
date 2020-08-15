@@ -45,9 +45,17 @@ EOF
 fi
 
 # ログがでなくなるまで繰り返し読み出す
-while ! `s2s-read`
+empty_count=0
+while [ $empty_count -lt 10 ]
 do
     sleep 1
+    read_buffer=`s2s-read`
+    if [ -z "$read_buffer" ]; then
+        empty_count=`expr $empty_count + 1`
+    else
+        empty_count=0
+        echo "$read_buffer"
+    fi
 done
 
 # 自動処理をスタート
